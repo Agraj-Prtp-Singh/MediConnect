@@ -14,7 +14,7 @@ router.get("/me", protect, async (req, res) => {
       });
     }
 
-    res.status(200).json({git status
+    res.status(200).json({
       user,
     });
   } catch (error) {
