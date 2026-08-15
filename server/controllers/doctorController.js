@@ -60,6 +60,41 @@ const applyAsDoctor = async (req, res) => {
   }
 };
 
+const getDoctors = async (req, res) => {
+  try {
+    const { specialty, search } = req.query;
+
+    const filter = {
+      verificationStatus: "approved",
+    };
+
+    if (specialty) {
+      filter.specialty = specialty;
+    }
+
+    let doctors = await Doctor.find(filter)
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+
+    if (search) {
+      const searchTerm = search.toLowerCase();
+
+      doctors = doctors.filter((doctor) =>
+        doctor.user.name.toLowerCase().includes(searchTerm),
+      );
+    }
+
+    res.status(200).json({
+      doctors,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch doctors",
+    });
+  }
+};
+
 module.exports = {
   applyAsDoctor,
+  getDoctors, 
 };
