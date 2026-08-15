@@ -94,7 +94,31 @@ const getDoctors = async (req, res) => {
   }
 };
 
+const getDoctorById = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      _id: req.params.id,
+      verificationStatus: "approved",
+    }).populate("user", "name email");
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Doctor not found",
+      });
+    }
+
+    res.status(200).json({
+      doctor,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch doctor",
+    });
+  }
+};
+
 module.exports = {
   applyAsDoctor,
-  getDoctors, 
+  getDoctors,
+  getDoctorById,
 };
