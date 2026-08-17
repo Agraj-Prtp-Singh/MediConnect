@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const availabilityRoutes = require("./routes/availabilityRoutes");
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/availability", availabilityRoutes);
 
 connectDB();
 
