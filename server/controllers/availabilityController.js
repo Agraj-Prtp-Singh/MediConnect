@@ -53,6 +53,35 @@ const createAvailability = async (req, res) => {
   }
 };
 
+const getMyAvailability = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const availability = await Availability.find({
+      doctor: doctor._id,
+      isActive: true,
+    }).sort({ dayOfWeek: 1 });
+
+    res.status(200).json({
+      availability,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch availability",
+    });
+  }
+};
+
 module.exports = {
   createAvailability,
+  getMyAvailability,
 };
