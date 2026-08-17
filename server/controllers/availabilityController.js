@@ -133,8 +133,49 @@ const updateAvailability = async (req, res) => {
   }
 };
 
+const deleteAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const availability = await Availability.findOne({
+      _id: id,
+      doctor: doctor._id,
+    });
+
+    if (!availability) {
+      return res.status(404).json({
+        message: "Availability not found",
+      });
+    }
+
+    availability.isActive = false;
+
+    await availability.save();
+
+    res.status(200).json({
+      message: "Availability removed successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to remove availability",
+    });
+  }
+};
+
 module.exports = {
   createAvailability,
   getMyAvailability,
   updateAvailability,
+  deleteAvailability,
 };
