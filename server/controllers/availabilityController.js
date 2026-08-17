@@ -81,7 +81,60 @@ const getMyAvailability = async (req, res) => {
   }
 };
 
+const updateAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const availability = await Availability.findOne({
+      _id: id,
+      doctor: doctor._id,
+    });
+
+    if (!availability) {
+      return res.status(404).json({
+        message: "Availability not found",
+      });
+    }
+
+    const { dayOfWeek, startTime, endTime, slotDuration } = req.body;
+
+    if (startTime >= endTime) {
+      return res.status(400).json({
+        message: "End time must be after start time",
+      });
+    }
+
+    availability.dayOfWeek = dayOfWeek;
+    availability.startTime = startTime;
+    availability.endTime = endTime;
+    availability.slotDuration = slotDuration;
+
+    await availability.save();
+
+    res.status(200).json({
+      message: "Availability updated successfully",
+      availability,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update availability",
+    });
+  }
+};
+
 module.exports = {
   createAvailability,
   getMyAvailability,
+  updateAvailability,
 };
