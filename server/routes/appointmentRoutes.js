@@ -10,6 +10,8 @@ const {
   getDoctorAppointments,
   confirmAppointment,
   completeAppointment,
+  cancelAppointment,
+  markNoShow,
 } = require("../controllers/appointmentController");
 
 const router = express.Router();
@@ -26,5 +28,7 @@ router.patch(
   authorize("doctor"),
   completeAppointment,
 );
+router.patch("/:id/cancel", protect, cancelAppointment);
+router.patch("/:id/no-show", protect, authorize("doctor"), markNoShow);
 
 module.exports = router;

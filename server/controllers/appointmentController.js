@@ -403,6 +403,105 @@ const completeAppointment = async (req, res) => {
   }
 };
 
+const cancelAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({
+        message: "Appointment not found",
+      });
+    }
+
+    if (!["pending", "confirmed"].includes(appointment.status)) {
+      return res.status(400).json({
+        message: "This appointment cannot be cancelled",
+      });
+    }
+
+    const isPatient = appointment.patient.toString() === req.user.id;
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+    });
+
+    const isDoctor =
+      doctor && appointment.doctor.toString() === doctor._id.toString();
+
+    if (!isPatient && !isDoctor) {
+      return res.status(403).json({
+        message: "You are not authorized to cancel this appointment",
+      });
+    }
+
+    appointment.status = "cancelled";
+
+    await appointment.save();
+
+    res.status(200).json({
+      message: "Appointment cancelled successfully",
+      appointment,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to cancel appointment",
+    });
+  }
+};
+
+const markNoShow = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: id,
+      doctor: doctor._id,
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        message: "Appointment not found",
+      });
+    }
+
+    if (appointment.status !== "confirmed") {
+      return res.status(400).json({
+        message: "Only confirmed appointments can be marked as no-show",
+      });
+    }
+
+    appointment.status = "no_show";
+
+    await appointment.save();
+
+    res.status(200).json({
+      message: "Appointment marked as no-show",
+      appointment,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to mark appointment as no-show",
+    });
+  }
+};
+
 module.exports = {
   getAvailableSlots,
   createAppointment,
@@ -410,4 +509,6 @@ module.exports = {
   getDoctorAppointments,
   confirmAppointment,
   completeAppointment,
+  cancelAppointment,
+  markNoShow,
 };
