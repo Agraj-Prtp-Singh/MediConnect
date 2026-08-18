@@ -48,47 +48,79 @@ const applyAsDoctor = async (req, res) => {
       profileImage,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Doctor application submitted successfully",
       doctor,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       message: "Server error",
-      error: error.message,
     });
   }
 };
 
 const getDoctors = async (req, res) => {
   try {
-    const { specialty, search } = req.query;
+    const { specialty, search, page = 1, limit = 10 } = req.query;
 
-    const filter = {
+    const currentPage = Math.max(Number(page), 1);
+    const pageLimit = Math.min(Math.max(Number(limit), 1), 50);
+
+    const skip = (currentPage - 1) * pageLimit;
+
+    const doctorFilter = {
       verificationStatus: "approved",
     };
 
+    // Filter by specialty
     if (specialty) {
-      filter.specialty = specialty;
+      doctorFilter.specialty = {
+        $regex: specialty,
+        $options: "i",
+      };
     }
 
-    let doctors = await Doctor.find(filter)
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
-
+    // Search by doctor's name
     if (search) {
-      const searchTerm = search.toLowerCase();
+      const users = await User.find({
+        name: {
+          $regex: search,
+          $options: "i",
+        },
+      }).select("_id");
 
-      doctors = doctors.filter((doctor) =>
-        doctor.user.name.toLowerCase().includes(searchTerm),
-      );
+      const userIds = users.map((user) => user._id);
+
+      doctorFilter.user = {
+        $in: userIds,
+      };
     }
 
-    res.status(200).json({
+    const [doctors, totalDoctors] = await Promise.all([
+      Doctor.find(doctorFilter)
+        .populate("user", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageLimit),
+
+      Doctor.countDocuments(doctorFilter),
+    ]);
+
+    return res.status(200).json({
       doctors,
+      pagination: {
+        page: currentPage,
+        limit: pageLimit,
+        total: totalDoctors,
+        totalPages: Math.ceil(totalDoctors / pageLimit),
+      },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       message: "Failed to fetch doctors",
     });
   }
@@ -107,11 +139,13 @@ const getDoctorById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       doctor,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       message: "Failed to fetch doctor",
     });
   }
