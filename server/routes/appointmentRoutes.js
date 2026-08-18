@@ -9,6 +9,7 @@ const {
   getMyAppointments,
   getDoctorAppointments,
   confirmAppointment,
+  completeAppointment,
 } = require("../controllers/appointmentController");
 
 const router = express.Router();
@@ -19,5 +20,11 @@ router.post("/", protect, authorize("patient"), createAppointment);
 router.get("/my", protect, authorize("patient"), getMyAppointments);
 router.get("/doctor", protect, authorize("doctor"), getDoctorAppointments);
 router.patch("/:id/confirm", protect, authorize("doctor"), confirmAppointment);
+router.patch(
+  "/:id/complete",
+  protect,
+  authorize("doctor"),
+  completeAppointment,
+);
 
 module.exports = router;
