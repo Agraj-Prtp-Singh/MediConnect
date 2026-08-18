@@ -81,9 +81,16 @@ const getAvailableSlots = async (req, res) => {
         const slotStart = minutesToTime(current);
         const slotEnd = minutesToTime(current + schedule.slotDuration);
 
-        const isBooked = appointments.some(
-          (appointment) => appointment.startTime === slotStart,
-        );
+        const isBooked = appointments.some((appointment) => {
+          const appointmentStart = timeToMinutes(appointment.startTime);
+
+          const appointmentEnd = timeToMinutes(appointment.endTime);
+
+          return (
+            appointmentStart < current + schedule.slotDuration &&
+            appointmentEnd > current
+          );
+        });
 
         slots.push({
           startTime: slotStart,
@@ -93,14 +100,14 @@ const getAvailableSlots = async (req, res) => {
       }
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       date,
       slots,
     });
   } catch (error) {
     console.error(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch available slots",
     });
   }
@@ -137,13 +144,14 @@ const createAppointment = async (req, res) => {
 
     const dayOfWeek = selectedDate.getDay();
 
-    const availability = await Availability.findOne({
+    // Find ALL availability schedules for this day
+    const availability = await Availability.find({
       doctor: doctor._id,
       dayOfWeek,
       isActive: true,
     });
 
-    if (!availability) {
+    if (availability.length === 0) {
       return res.status(400).json({
         message: "Doctor is not available on this day",
       });
@@ -152,31 +160,36 @@ const createAppointment = async (req, res) => {
     const requestedStart = timeToMinutes(startTime);
     const requestedEnd = timeToMinutes(endTime);
 
-    const availabilityStart = timeToMinutes(availability.startTime);
-
-    const availabilityEnd = timeToMinutes(availability.endTime);
-
-    if (requestedStart < availabilityStart || requestedEnd > availabilityEnd) {
+    if (requestedEnd <= requestedStart) {
       return res.status(400).json({
-        message: "Requested time is outside doctor's availability",
+        message: "Invalid appointment time",
       });
     }
 
-    if (requestedEnd - requestedStart !== availability.slotDuration) {
-      return res.status(400).json({
-        message: "Invalid appointment duration",
-      });
-    }
+    // Check whether the requested slot belongs to
+    // any of the doctor's availability schedules
+    const matchingSchedule = availability.find((schedule) => {
+      const availabilityStart = timeToMinutes(schedule.startTime);
 
-    if (
-      (requestedStart - availabilityStart) % availability.slotDuration !==
-      0
-    ) {
+      const availabilityEnd = timeToMinutes(schedule.endTime);
+
+      const slotDuration = schedule.slotDuration;
+
+      return (
+        requestedStart >= availabilityStart &&
+        requestedEnd <= availabilityEnd &&
+        requestedEnd - requestedStart === slotDuration &&
+        (requestedStart - availabilityStart) % slotDuration === 0
+      );
+    });
+
+    if (!matchingSchedule) {
       return res.status(400).json({
         message: "Invalid appointment slot",
       });
     }
 
+    // Check if the requested slot is already booked
     const existingAppointment = await Appointment.findOne({
       doctor: doctor._id,
       date,
@@ -192,25 +205,44 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    const appointment = await Appointment.create({
-      patient: req.user.id,
-      doctor: doctor._id,
-      date,
-      startTime,
-      endTime,
-      reason,
-      consultationFee: doctor.consultationFee,
-    });
+    const bookingKey = `${doctor._id}_${date}_${startTime}`;
 
-    res.status(201).json({
-      message: "Appointment created successfully",
-      appointment,
-    });
+    try {
+      const appointment = await Appointment.create({
+        patient: req.user.id,
+        doctor: doctor._id,
+        date,
+        startTime,
+        endTime,
+        bookingKey,
+        reason,
+        consultationFee: doctor.consultationFee,
+      });
+
+      return res.status(201).json({
+        message: "Appointment created successfully",
+        appointment,
+      });
+    } catch (error) {
+      // Handles duplicate bookingKey
+      if (error.code === 11000) {
+        return res.status(409).json({
+          message: "This appointment slot was just booked by another patient",
+        });
+      }
+
+      throw error;
+    }
   } catch (error) {
     console.error(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to create appointment",
     });
   }
+};
+
+module.exports = {
+  getAvailableSlots,
+  createAppointment,
 };
