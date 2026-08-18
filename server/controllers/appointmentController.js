@@ -271,8 +271,43 @@ const getMyAppointments = async (req, res) => {
   }
 };
 
+const getDoctorAppointments = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const appointments = await Appointment.find({
+      doctor: doctor._id,
+    })
+      .populate("patient", "name email")
+      .sort({
+        date: 1,
+        startTime: 1,
+      });
+
+    res.status(200).json({
+      appointments,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch doctor appointments",
+    });
+  }
+};
+
 module.exports = {
   getAvailableSlots,
   createAppointment,
   getMyAppointments,
+  getDoctorAppointments,
 };
