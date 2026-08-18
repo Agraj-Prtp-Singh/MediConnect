@@ -305,9 +305,59 @@ const getDoctorAppointments = async (req, res) => {
   }
 };
 
+const confirmAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Approved doctor profile not found",
+      });
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: id,
+      doctor: doctor._id,
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        message: "Appointment not found",
+      });
+    }
+
+    if (appointment.status !== "pending") {
+      return res.status(400).json({
+        message: "Only pending appointments can be confirmed",
+      });
+    }
+
+    appointment.status = "confirmed";
+
+    await appointment.save();
+
+    res.status(200).json({
+      message: "Appointment confirmed successfully",
+      appointment,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to confirm appointment",
+    });
+  }
+};
+
 module.exports = {
   getAvailableSlots,
   createAppointment,
   getMyAppointments,
   getDoctorAppointments,
+  confirmAppointment,
 };
