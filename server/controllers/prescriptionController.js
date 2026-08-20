@@ -155,3 +155,9 @@ const getPrescriptionById = async (req, res) => {
     });
   }
 };
+
+module.exports = {
+  createPrescription,
+  getMyPrescriptions,
+  getPrescriptionById,
+};
