@@ -71,3 +71,35 @@ const createPrescription = async (req, res) => {
     });
   }
 };
+
+const getMyPrescriptions = async (req, res) => {
+  try {
+    const prescriptions = await Prescription.find({
+      patient: req.user.id,
+    })
+      .populate({
+        path: "doctor",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate({
+        path: "appointment",
+        select: "date startTime endTime status",
+      })
+      .sort({
+        createdAt: -1,
+      });
+
+    res.status(200).json({
+      prescriptions,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch prescriptions",
+    });
+  }
+};
