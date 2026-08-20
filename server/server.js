@@ -25,7 +25,6 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 
-
 connectDB();
 
 app.get("/", (req, res) => {

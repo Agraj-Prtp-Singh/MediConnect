@@ -2,16 +2,22 @@ const Prescription = require("../models/Prescription");
 const Appointment = require("../models/Appointment");
 const Doctor = require("../models/Doctor");
 
+// CREATE PRESCRIPTION
+// Doctor can create a prescription only for their
+// own completed appointment.
+
 const createPrescription = async (req, res) => {
   try {
     const { appointmentId, diagnosis, medicines, notes } = req.body;
 
+    // Validate required fields
     if (!appointmentId || !diagnosis) {
-      return res.status(404).json({
+      return res.status(400).json({
         message: "appointmentId and diagnosis are required",
       });
     }
 
+    // Find the authenticated doctor's Doctor profile
     const doctor = await Doctor.findOne({
       user: req.user.id,
       verificationStatus: "approved",
@@ -19,37 +25,43 @@ const createPrescription = async (req, res) => {
 
     if (!doctor) {
       return res.status(404).json({
-        message: "Approved Doctor profile not found",
+        message: "Approved doctor profile not found",
       });
     }
 
-    const appointment = await Appointment.find({
+    // Find the appointment AND make sure it belongs
+    // to the authenticated doctor
+    const appointment = await Appointment.findOne({
       _id: appointmentId,
       doctor: doctor._id,
     });
 
     if (!appointment) {
       return res.status(404).json({
-        message: "Appointment Not Found",
+        message: "Appointment not found",
       });
     }
 
+    // Prescription can only be created after
+    // the consultation is completed
     if (appointment.status !== "completed") {
       return res.status(400).json({
         message: "Prescription can only be created for completed appointments",
       });
     }
 
-    const exixstingPrescription = await Prescription.findOne({
+    // Prevent multiple prescriptions for one appointment
+    const existingPrescription = await Prescription.findOne({
       appointment: appointment._id,
     });
 
-    if (exixstingPrescription) {
+    if (existingPrescription) {
       return res.status(400).json({
         message: "A prescription already exists for this appointment",
       });
     }
 
+    // Create prescription
     const prescription = await Prescription.create({
       appointment: appointment._id,
       doctor: doctor._id,
@@ -64,13 +76,17 @@ const createPrescription = async (req, res) => {
       prescription,
     });
   } catch (error) {
-    console.error();
+    console.error("Create prescription error:", error);
 
     res.status(500).json({
       message: "Failed to create prescription",
+      error: error.message,
     });
   }
 };
+
+// GET MY PRESCRIPTIONS
+// Patient can view all of their prescriptions.
 
 const getMyPrescriptions = async (req, res) => {
   try {
@@ -96,13 +112,17 @@ const getMyPrescriptions = async (req, res) => {
       prescriptions,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get my prescriptions error:", error);
 
     res.status(500).json({
       message: "Failed to fetch prescriptions",
     });
   }
 };
+
+// GET PRESCRIPTION BY ID
+// Only the patient who owns it OR the doctor who created
+// it can view the prescription.
 
 const getPrescriptionById = async (req, res) => {
   try {
@@ -129,15 +149,18 @@ const getPrescriptionById = async (req, res) => {
       });
     }
 
+    // Check whether authenticated user is the patient
+    const isPatient = prescription.patient._id.toString() === req.user.id;
+
+    // Check whether authenticated user is the doctor
     const doctor = await Doctor.findOne({
       user: req.user.id,
     });
 
-    const isPatient = prescription.patient._id.toString() === req.user.id;
-
     const isDoctor =
       doctor && prescription.doctor._id.toString() === doctor._id.toString();
 
+    // User must be either the patient or the doctor
     if (!isPatient && !isDoctor) {
       return res.status(403).json({
         message: "You are not authorized to view this prescription",
@@ -148,7 +171,7 @@ const getPrescriptionById = async (req, res) => {
       prescription,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get prescription by ID error:", error);
 
     res.status(500).json({
       message: "Failed to fetch prescription",
