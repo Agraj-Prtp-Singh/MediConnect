@@ -103,3 +103,55 @@ const getMyPrescriptions = async (req, res) => {
     });
   }
 };
+
+const getPrescriptionById = async (req, res) => {
+  try {
+    const prescription = await Prescription.findById(req.params.id)
+      .populate({
+        path: "doctor",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate({
+        path: "patient",
+        select: "name email",
+      })
+      .populate({
+        path: "appointment",
+        select: "date startTime endTime status",
+      });
+
+    if (!prescription) {
+      return res.status(404).json({
+        message: "Prescription not found",
+      });
+    }
+
+    const doctor = await Doctor.findOne({
+      user: req.user.id,
+    });
+
+    const isPatient = prescription.patient._id.toString() === req.user.id;
+
+    const isDoctor =
+      doctor && prescription.doctor._id.toString() === doctor._id.toString();
+
+    if (!isPatient && !isDoctor) {
+      return res.status(403).json({
+        message: "You are not authorized to view this prescription",
+      });
+    }
+
+    res.status(200).json({
+      prescription,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch prescription",
+    });
+  }
+};
