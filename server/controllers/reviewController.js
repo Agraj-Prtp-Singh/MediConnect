@@ -103,3 +103,49 @@ const createReview = async (req, res) => {
     });
   }
 };
+
+const getDoctorReviews = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    const doctor = await Doctor.findOne({
+      _id: doctorId,
+      verificationStatus: "approved",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Doctor not found",
+      });
+    }
+
+    const reviews = await Review.find({
+      doctor: doctorId,
+    })
+      .populate("patient", "name")
+      .sort({
+        createdAt: -1,
+      });
+
+    const totalReviews = reviews.length;
+
+    const averageRating =
+      totalReviews === 0
+        ? 0
+        : reviews.reduce((sum, review) => sum + review.rating, 0) /
+          totalReviews;
+
+    res.status(200).json({
+      averageRating: Number(averageRating.toFixed(1)),
+      totalReviews,
+      reviews,
+    });
+  } catch (error) {
+    console.error("Get doctor reviews error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch doctor reviews",
+      error: error.message,
+    });
+  }
+};
