@@ -9,6 +9,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const availabilityRoutes = require("./routes/availabilityRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const medicalHistoryRoutes = require("./routes/medicalHistoryRoutes");
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/medical-history", medicalHistoryRoutes);
 
 connectDB();
 
