@@ -10,6 +10,7 @@ const availabilityRoutes = require("./routes/availabilityRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const medicalHistoryRoutes = require("./routes/medicalHistoryRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/medical-history", medicalHistoryRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 connectDB();
 

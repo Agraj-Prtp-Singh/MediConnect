@@ -149,3 +149,42 @@ const getDoctorReviews = async (req, res) => {
     });
   }
 };
+
+const getMyReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({
+      patient: req.user.id,
+    })
+      .populate({
+        path: "doctor",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate({
+        path: "appointment",
+        select: "date startTime endTime status",
+      })
+      .sort({
+        createdAt: -1,
+      });
+
+    res.status(200).json({
+      reviews,
+    });
+  } catch (error) {
+    console.error("Get my reviews error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch your reviews",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  createReview,
+  getDoctorReviews,
+  getMyReviews,
+};
