@@ -1,3 +1,7 @@
+const Review = require("../models/Review");
+const Appointment = require("../models/Appointment");
+const Doctor = require("../models/Doctor");
+
 const createReview = async (req, res) => {
   try {
     const { appointmentId, rating, comment } = req.body;
